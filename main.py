@@ -60,11 +60,6 @@ async def create_upload_file(sound: UploadFile):
     return StreamingResponse(text, media_type="text/plain")
 
 
-def consume_transcribe(out_file_path, original_name):
-    for x in transcribe(out_file_path, original_name):
-        print(x)
-
-
 def transcribe(file_name, original_name) -> str:
     print("using tmp file", file_name)
     timestamp = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dZ%H-%M-%S")
