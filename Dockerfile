@@ -15,6 +15,7 @@ RUN pip install aiofiles
 WORKDIR app
 COPY model /app/model
 # preload the model
+# This makes the docker image much larger but the startup can be done offline, and maybe a bit faster
 RUN python3 model/model.py
 
 COPY main.py /app/main.py
