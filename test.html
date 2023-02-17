@@ -12,6 +12,7 @@
             // Start recording when the user clicks the "record" button
             const recordButton = document.getElementById("record-button");
             recordButton.addEventListener("click", () => {
+                chunks = [];
                 mediaRecorder.start();
             });
 
@@ -29,28 +30,80 @@
             mediaRecorder.addEventListener("stop", () => {
                 const audioBlob = new Blob(chunks, { type: "audio/ogg; codecs=opus" });
                 const audioUrl = URL.createObjectURL(audioBlob);
-                const audio = new Audio(audioUrl);
-                audio.controls = true;
-                document.body.appendChild(audio);
-                // Upload the recorded audio to the server
-                const formData = new FormData();
-                formData.append("sound", audioBlob);
-                fetch("/transcribe", {
-                    method: "POST",
-                    body: formData
-                }).then((response) => {
-                    return response.text();
-                }).then((text) => {
-                    // write it to the page
-                    const output = document.getElementById("output");
-                    output.innerHTML = text;
-                })
+                const audio = document.getElementById("recording");
+                // add the audio to the page
+                audio.src = audioUrl
+                // send the audio to the server
+                const output = document.getElementById("transcription");
+                output.innerHTML = "";
+                askAlexa(audioBlob);
             });
         })
         .catch((error) => {
             console.error(error);
         });
+
+
+    function askAlexa(audioBlob) {
+        // Upload the recorded audio to the server
+        const formData = new FormData();
+        formData.append("sound", audioBlob);
+        fetch("/transcribe", {
+            method: "POST",
+            body: formData
+        }).then((response) => {
+            const reader = response.body.getReader();
+            return new ReadableStream({
+                start(controller) {
+                    return pump();
+
+                    function pump() {
+                        return reader.read().then(({ done, value }) => {
+                            // When no more data needs to be consumed, close the stream
+                            if (done) {
+                                controller.close();
+                                return;
+                            }
+
+                            // convert the byte stream to a string
+                            const decoder = new TextDecoder("utf-8");
+                            const valueString = decoder.decode(value);
+                            // append each value to the transcription div
+                            const output = document.getElementById("transcription");
+                            output.innerHTML += valueString;
+
+                            controller.enqueue(valueString);
+                            return pump();
+                        });
+                    }
+                }
+            });
+        }).then((stream) => {
+            // when stream is done, send the transcription to the server
+            stream.getReader().read().then(({ done, value }) => {
+                const transcription = document.getElementById("transcription").innerText;
+                const output = document.getElementById("response");
+                output.innerHTML = "";
+                fetch("http://3.236.154.23:80/", {
+                    method: "POST",
+                    body: transcription,
+                    // plain text
+                    headers: {
+                        "Content-Type": "text/plain"
+                    }
+                }).then((response) => {
+                    response.text().then((text) => {
+                        output.innerHTML = text;
+                    });
+                });
+            });
+            });
+        }
 </script>
 <button id="record-button">Record</button>
 <button id="stop-button">Stop</button>
-<div id="output"></div>
+<audio id="recording" controls></audio>
+<div>Transcribed text:</div>
+<div id="transcription"></div>
+<div>Language Model output:</div>
+<div id="response"></div>
