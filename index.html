@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<form action="/transcribe" enctype="multipart/form-data" method="post" target="output"
+      onSubmit="setTimeout(() => this[0].disabled='disabled', 10)">
+  <fieldset>
+    <input name="sound" type="file">
+    <input type="submit">
+  </fieldset>
+</form>
+<iframe name="output" width="90%%" height="400px"></iframe>
+</body>
+</html>

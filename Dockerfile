@@ -7,16 +7,17 @@ RUN apt-get update && apt-get install -y \
   python3 \
   python3-pip
 
-RUN pip install git+https://github.com/tatellos/whisper.git
-RUN pip install "fastapi[all]"
 RUN apt-get install -y ffmpeg
-RUN pip install aiofiles
 
 WORKDIR app
+COPY requirements.txt /app/requirements.txt
+RUN pip install -r /app/requirements.txt
 COPY model /app/model
 # preload the model
 RUN python3 model/model.py
 
+COPY test.html /app/test.html
+COPY index.html /app/index.html
 COPY main.py /app/main.py
 
 

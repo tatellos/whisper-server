@@ -1,0 +1,56 @@
+<script>
+    // First, get the necessary APIs and permissions
+
+    const constraints = { audio: true };
+    navigator.mediaDevices.getUserMedia(constraints)
+        .then((stream) => {
+            const mediaRecorder = new MediaRecorder(stream);
+
+            // Create a variable to hold the recorded audio data
+            let chunks = [];
+
+            // Start recording when the user clicks the "record" button
+            const recordButton = document.getElementById("record-button");
+            recordButton.addEventListener("click", () => {
+                mediaRecorder.start();
+            });
+
+            // Stop recording when the user clicks the "stop" button
+            const stopButton = document.getElementById("stop-button");
+            stopButton.addEventListener("click", () => {
+                mediaRecorder.stop();
+            });
+
+            // Save the recorded audio data when the recording is complete
+            mediaRecorder.addEventListener("dataavailable", (event) => {
+                chunks.push(event.data);
+            });
+
+            mediaRecorder.addEventListener("stop", () => {
+                const audioBlob = new Blob(chunks, { type: "audio/ogg; codecs=opus" });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
+                audio.controls = true;
+                document.body.appendChild(audio);
+                // Upload the recorded audio to the server
+                const formData = new FormData();
+                formData.append("sound", audioBlob);
+                fetch("/transcribe", {
+                    method: "POST",
+                    body: formData
+                }).then((response) => {
+                    return response.text();
+                }).then((text) => {
+                    // write it to the page
+                    const output = document.getElementById("output");
+                    output.innerHTML = text;
+                })
+            });
+        })
+        .catch((error) => {
+            console.error(error);
+        });
+</script>
+<button id="record-button">Record</button>
+<button id="stop-button">Stop</button>
+<div id="output"></div>

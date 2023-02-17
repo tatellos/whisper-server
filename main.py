@@ -13,35 +13,10 @@ from model import model
 app = FastAPI()
 os.makedirs("transcriptions", exist_ok=True)
 
-htmlcontent = """
-<body>
-<form action="/transcribe" enctype="multipart/form-data" method="post" target="output" 
-onSubmit="setTimeout(() => this[0].disabled='disabled', 10)">
-<fieldset>
-<input name="sound" type="file">
-<input type="submit">
-</fieldset>
-</form>
-<iframe name="output" width="90%%" height="400px"></iframe>
-<br>When the transcription is done, you can reload the page to find a link to the full transcription.
-<ul>
-%s
-</ul>
-</body>
-    """
-
-
-def get_html():
-    files = os.listdir("transcriptions")
-    files.sort()
-    files.reverse()
-    links = ["<li><a href='/transcriptions/" + x + "'>" + x + "</a></li>" for x in files]
-    return HTMLResponse(htmlcontent % "\n".join(links))
-
-
 @app.get("/")
 async def main():
-    return get_html()
+    return HTMLResponse(open("test.html").read())
+
 
 
 app.mount("/transcriptions", StaticFiles(directory="transcriptions"), name="transcriptions")
@@ -74,3 +49,9 @@ def transcribe(file_name, original_name) -> str:
         yield x + "\n"
 
     os.remove(file_name)
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app)
