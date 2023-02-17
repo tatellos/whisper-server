@@ -1,0 +1,5 @@
+aiofiles
+fastapi[all]
+
+git+https://github.com/tatellos/whisper.git
+python-multipart
