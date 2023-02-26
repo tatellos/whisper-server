@@ -81,18 +81,17 @@
         }).then((stream) => {
             // when stream is done, send the transcription to the server
             stream.getReader().read().then(({ done, value }) => {
-                const transcription = document.getElementById("transcription").innerText;
+                const transcription = document.getElementById("transcription").innerText || "";
                 const output = document.getElementById("response");
                 output.innerHTML = "";
-                fetch("http://3.236.154.23:80/", {
+                fetch("/languagemodel", {
                     method: "POST",
-                    body: transcription,
-                    // plain text
                     headers: {
-                        "Content-Type": "text/plain"
-                    }
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ text: transcription })
                 }).then((response) => {
-                    response.text().then((text) => {
+                    response.json().then(({ text }) => {
                         output.innerHTML = text;
                     });
                 });
