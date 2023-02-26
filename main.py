@@ -18,8 +18,12 @@ os.makedirs("transcriptions", exist_ok=True)
 
 @app.get("/")
 async def main():
-    return HTMLResponse(open("test.html").read())
+    return HTMLResponse(open("chat.html").read())
 
+
+@app.get("/transcribe")
+async def transcribe_page():
+    return HTMLResponse(open("transcribe.html").read())
 
 app.mount("/transcriptions", StaticFiles(directory="transcriptions"), name="transcriptions")
 
