@@ -17,8 +17,8 @@ COPY model /app/model
 # This makes the docker image much larger but the startup can be done offline, and maybe a bit faster
 RUN python3 model/model.py
 
-COPY test.html /app/test.html
-COPY index.html /app/index.html
+COPY chat.html /app/chat.html
+COPY transcribe.html /app/transcribe.html
 COPY main.py /app/main.py
 
 
