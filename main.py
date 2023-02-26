@@ -12,8 +12,11 @@ from pydantic import BaseModel
 
 from model import model
 
+# Read URL of languagemodel from environment variable
+languagemodel_url = os.environ.get("LANGUAGEMODEL_URL", "http://localhost:8000")
 app = FastAPI()
 os.makedirs("transcriptions", exist_ok=True)
+app.mount("/transcriptions", StaticFiles(directory="transcriptions"), name="transcriptions")
 
 
 @app.get("/")
@@ -24,8 +27,6 @@ async def main():
 @app.get("/transcribe")
 async def transcribe_page():
     return HTMLResponse(open("transcribe.html").read())
-
-app.mount("/transcriptions", StaticFiles(directory="transcriptions"), name="transcriptions")
 
 
 @app.post("/transcribe")
@@ -44,12 +45,13 @@ async def create_upload_file(sound: UploadFile):
 class TextInJson(BaseModel):
     text: str
 
+
 @app.post("/languagemodel")
 async def proxy_to_languagemodel(text: TextInJson):
     input_text = text.text
     print("Proxying to languagemodel", input_text)
     # send the input text in a form to the languagemodel
-    response = requests.post("http://localhost:8000", data={"text": input_text}).text
+    response = requests.post(languagemodel_url, data={"text": input_text}).text
     return TextInJson(text=response)
 
 
