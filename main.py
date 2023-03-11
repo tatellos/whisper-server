@@ -95,9 +95,9 @@ async def proxy_to_languagemodel(text: TextInJson):
         response = PROMPTS[response](text.text)
     except:
         print('Error in parsing.')
-        input_text = text.text + " Answer: "
-        response = requests.post(languagemodel_url, data={"text": input_text}).text
-        response = "fallbackResponse('" + response + "');"
+        # The AI model did not understand the kind of question. Just google the question.
+        google_url_query = "+".join(text.text.split(" "))
+        return "window.location.href='https://www.google.com/search?q=" + google_url_query + "';"
     return TextInJson(text=response)
 
 
