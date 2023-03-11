@@ -65,7 +65,7 @@ Question: What is the weather in Hamburg tomorrow? Answer: https://www.wetteronl
 Question: '''
     input_text = PROMPT_WEATHER + text + " Answer: "
     response = requests.post(languagemodel_url, data={"text": input_text}).text
-    return "window.location.href=" + response+";"
+    return "window.location.href='" + response+"';"
 
 
 def handle_timer (text: str):
@@ -78,7 +78,7 @@ Question: '''
     input_text = PROMPT_TIMER + text + " Answer: "
     response = requests.post(languagemodel_url, data={"text": input_text}).text
     
-    return "setTimeout(() => alert('Reminder!', " + str(int(response) * 1000) + ");"
+    return "setTimeout(() => alert('Reminder!'), " + str(int(response) * 1000) + ");"
     
 PROMPTS =  {'api/weather': handle_weather,
              'api/timer': handle_timer}
