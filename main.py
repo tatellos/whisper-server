@@ -14,7 +14,6 @@ from model import model
 
 # Read URL of languagemodel from environment variable
 languagemodel_url = os.environ.get("LANGUAGEMODEL_URL", "http://localhost:8000")
-prompt_server_url = os.environ.get("PROMPT_SERVER_URL", "http://localhost:8001")
 app = FastAPI()
 os.makedirs("transcriptions", exist_ok=True)
 app.mount("/transcriptions", StaticFiles(directory="transcriptions"), name="transcriptions")
@@ -50,9 +49,6 @@ class TextInJson(BaseModel):
 @app.post("/languagemodel")
 async def proxy_to_languagemodel(text: TextInJson):
     input_text = text.text
-    print("Enhancing the prompt")
-    prompt = requests.get(prompt_server_url+"/prompt").text
-    input_text = prompt.replace("%%USERINPUT%%", input_text)
     print("Proxying to languagemodel", input_text)
     # send the input text in a form to the languagemodel
     response = requests.post(languagemodel_url, data={"text": input_text}).text
