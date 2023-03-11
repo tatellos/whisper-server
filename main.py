@@ -1,3 +1,4 @@
+import collections
 import datetime as dt
 import os
 import uuid
@@ -13,7 +14,7 @@ from pydantic import BaseModel
 from model import model
 
 # Read URL of languagemodel from environment variable
-languagemodel_url = os.environ.get("LANGUAGEMODEL_URL", "http://localhost:8000")
+languagemodel_url = os.environ.get("LANGUAGEMODEL_URL", "http://127.0.0.1:5000")
 app = FastAPI()
 os.makedirs("transcriptions", exist_ok=True)
 app.mount("/transcriptions", StaticFiles(directory="transcriptions"), name="transcriptions")
@@ -46,12 +47,64 @@ class TextInJson(BaseModel):
     text: str
 
 
+PROMPT_API = '''
+Question: What is the weather in Tallinn? Answer: api/weather
+Question: Set a timer for one minute. Answer: api/timer
+Question: Set a timer for 1 hour. Answer: api/timer
+Question: What day is it tomorrow? Answer: api/date
+Question: What day is it? Answer: api/date
+
+The answer should be one of api/weather, api/timer, api/date, api/other.
+
+Question: '''
+
+
+
+def handle_weather (text: str):
+    print('Calling api/weather')
+    PROMPT_WEATHER = '''
+Question: What is the weather in Hamburg? Answer: https://www.wetteronline.de/wetter/Hamburg
+Question: What is the weather in Tallinn? Answer: https://www.wetteronline.de/wetter/Tallinn
+Question: What is the weather in Hamburg tomorrow? Answer: https://www.wetteronline.de/wettertrend/Hamburg/
+
+Question: '''
+    input_text = PROMPT_WEATHER + text + " Answer: "
+    response = requests.post(languagemodel_url, data={"text": input_text}).text
+    return response
+
+
+def handle_timer (text: str):
+    print('Calling api/timer')
+    PROMPT_TIMER = '''
+Question: Set a timer for one minute. Answer: 60
+Question: Set a timer for one hour. Answer: 3600
+Question: Set a timer for five seconds. Answer: 5
+Question: Set a timer fo 5 minutes. Answer: 300
+
+Question: '''
+    input_text = PROMPT_TIMER + text + " Answer: "
+    response = requests.post(languagemodel_url, data={"text": input_text}).text
+    
+    return "Timer set for seconds: " + str(int(response))
+    
+PROMPTS =  {'api/weather': handle_weather,
+             'api/timer': handle_timer}
+
+
 @app.post("/languagemodel")
 async def proxy_to_languagemodel(text: TextInJson):
-    input_text = text.text
-    print("Proxying to languagemodel", input_text)
+    input_text = PROMPT_API + text.text + " Answer: "
+    print("Proxying to languagemodel", input_text )
     # send the input text in a form to the languagemodel
     response = requests.post(languagemodel_url, data={"text": input_text}).text
+    print(response)
+    try:
+        pass
+        response = PROMPTS[response](text.text)
+    except:
+        print('Error in parsing.')
+        input_text = text.text + " Answer: "
+        response = requests.post(languagemodel_url, data={"text": input_text}).text
     return TextInJson(text=response)
 
 
