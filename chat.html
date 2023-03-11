@@ -82,6 +82,10 @@
             // when stream is done, send the transcription to the server
             stream.getReader().read().then(({ done, value }) => {
                 const transcription = document.getElementById("transcription").innerText || "";
+                const prompt = document.getElementById("prompt");
+                prompt.innerHTML=document.getElementById("prefix").value;
+                prompt.innerHTML+=" "+transcription;
+                prompt.innerHTML+=" "+document.getElementById("postfix").value;
                 const output = document.getElementById("response");
                 output.innerHTML = "";
                 fetch("/languagemodel", {
@@ -89,7 +93,7 @@
                     headers: {
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify({ text: transcription })
+                    body: JSON.stringify({ text: prompt.innerText || "" })
                 }).then((response) => {
                     response.json().then(({ text }) => {
                         output.innerHTML = text;
@@ -102,8 +106,16 @@
 <button id="record-button">Record</button>
 <button id="stop-button">Stop</button>
 <audio id="recording" controls></audio>
+<div>Prefix for prompt</div>
+<textarea id="prefix" name="prefix" rows="10" cols="50">
+    </textarea>
+<div>Postfix for prompt</div>
+<textarea id="postfix" name="postfix" rows="10" cols="50">
+</textarea>
 <div>Transcribed text:</div>
 <div id="transcription"></div>
+<div>Prompt sent to languagemodel:</div>
+<div id="prompt"></div>
 <div>Language Model output:</div>
 <div id="response"></div>
 <br>
