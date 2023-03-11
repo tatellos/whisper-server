@@ -1,9 +1,12 @@
 import collections
 import datetime as dt
+import json
 import os
+import wikipediaapi
 import uuid
 
 import aiofiles as aiofiles
+import urllib3
 import whisper
 from fastapi import FastAPI, UploadFile
 import requests
@@ -47,25 +50,66 @@ class TextInJson(BaseModel):
     text: str
 
 
-PROMPT_API = '''The answer should be one of api/weather, api/timer, api/date, api/other.
+PROMPT_API = '''
+The answer should be one of api/weather, api/timer, api/wikipedia, api/other.
+
 Question: What is the weather in Tallinn? Answer: api/weather
 Question: Set a timer for one minute. Answer: api/timer
 Question: Set a timer for 1 hour. Answer: api/timer
-Question: What day is it tomorrow? Answer: api/date
-Question: What day is it? Answer: api/date
+Question: How long do bears live?. Answer: api/wikipedia
+Question: How are bicycles made?. Answer: api/wikipedia
+Question: When was Angela Merkel born? Answer: api/wikipedia
+Question: Where do kangaroos live? Answer: api/wikipedia
+Question: Who is the President of US? Answer: api/wikipedia
+
 Question: '''
 
 
+def getWeatherData(location: str):
+    url = f"https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/{location}?unitGroup=metric&include=current&key=FFLYWNZAQ4Y6CWEK7N8E342NH&contentType=json".format(location)
+    print(url)
+    weatherData = requests.get(url).json()
+
+    # Parse the results as JSON
+    return str(weatherData['currentConditions'])
 
 def handle_weather (text: str):
     print('Calling api/weather')
-    PROMPT_WEATHER = '''Question: What is the weather in Hamburg? Answer: https://www.wetteronline.de/wetter/Hamburg
-Question: What is the weather in Tallinn? Answer: https://www.wetteronline.de/wetter/Tallinn
-Question: What is the weather in Hamburg tomorrow? Answer: https://www.wetteronline.de/wettertrend/Hamburg/
-Question: '''
-    input_text = PROMPT_WEATHER + text + " Answer: "
+    input_text =  text + " \n\n What is this city?"
+    city = requests.post(languagemodel_url, data={"text": input_text}).text
+    print(city)
+    
+    input_text = "Weather data:\n" + getWeatherData(city) + '\n\nQuestion:' + text + "\nAnswer:"
+    print("Weather call:", input_text)
     response = requests.post(languagemodel_url, data={"text": input_text}).text
-    return "window.location.href='" + response+"';"
+    print(response)
+    return response
+
+def getWikiPageTitle(text: str):
+    PROMPT_SUBJECT = ''' Question: What is the subject?
+    
+    '''
+    input_text =  PROMPT_SUBJECT + text
+    subject = requests.post(languagemodel_url, data={"text": input_text}).text
+    subject = subject.replace(' ', '+')
+    
+    url = f"https://en.wikipedia.org/w/api.php?action=opensearch&format=json&search={subject}&limit=1&namespace=0".format(subject)
+    print(url)
+    wikiData = requests.get(url).json()
+    print(wikiData)
+    return wikiData[1][0]
+
+def handle_wikipedia (text: str):
+    print('Calling api/wikipedia')
+    wikiTitle = getWikiPageTitle(text)
+    
+    page = wikipediaapi.Wikipedia('en').page(wikiTitle)
+    
+    PROMPT_WIKIPEDIA = page.summary + '\n\n Question: '
+    input_text = PROMPT_WIKIPEDIA + text + '\nAnswer:'
+    response = requests.post(languagemodel_url, data={"text": input_text}).text
+
+    return f"show_info('{response}')"
 
 
 def handle_timer (text: str):
@@ -81,7 +125,8 @@ Question: '''
     return "setTimeout(() => alert('Reminder!'), " + str(int(response) * 1000) + ");"
     
 PROMPTS =  {'api/weather': handle_weather,
-             'api/timer': handle_timer}
+            'api/wikipedia': handle_wikipedia,
+             'api/timer': handle_timer,}
 
 
 @app.post("/languagemodel")
@@ -93,18 +138,19 @@ async def proxy_to_languagemodel(text: TextInJson):
     print(response)
     try:
         response = PROMPTS[response](text.text)
-    except:
+    except Exception as e:
+        print(e)
         print('Error in parsing.')
         # The AI model did not understand the kind of question. Just google the question.
         google_url_query = "+".join(text.text.split(" "))
-        return "window.location.href='https://www.google.com/search?q=" + google_url_query + "';"
+        response = "window.location.href='https://www.google.com/search?q=" + google_url_query + "';"
     return TextInJson(text=response)
 
 
 def transcribe(file_name, original_name) -> str:
     print("using tmp file", file_name)
     timestamp = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dZ%H-%M-%S")
-    for x in whisper.transcribe(model, file_name, verbose=True):
+    for x in whisper.transcribe(model, file_name, verbose=True, language='English'):
         with open(os.path.join("transcriptions", timestamp + "." + original_name + ".txt"), "a") as f:
             f.write(x + "\n")
         yield x + "\n"
