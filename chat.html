@@ -82,31 +82,40 @@
             // when stream is done, send the transcription to the server
             stream.getReader().read().then(({ done, value }) => {
                 const transcription = document.getElementById("transcription").innerText || "";
-                const output = document.getElementById("response");
-                output.innerHTML = "";
-                fetch("/languagemodel", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ text: transcription })
-                }).then((response) => {
-                    response.json().then(({ text }) => {
-                        output.innerHTML = text;
-                    });
-                });
+                postToLM(transcription)
             });
-            });
-        }
+        });
+    }
 
-        function fallbackResponse(aiResponse) {
-            const output = document.getElementById("response");
-            output.innerHTML = aiResponse
-        }
+    function postToLM(transcription) {
+        console.log(transcription)
+        const output = document.getElementById("response");
+        output.innerHTML = "";
+        fetch("/languagemodel", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ text: transcription })
+        }).then((response) => {
+            response.json().then(({ text }) => {
+                output.innerHTML = text;
+            });
+        });
+    }
+
+    function fallbackResponse(aiResponse) {
+        const output = document.getElementById("response");
+        output.innerHTML = aiResponse
+    }
 </script>
 <button id="record-button">Record</button>
 <button id="stop-button">Stop</button>
 <audio id="recording" controls></audio>
+<div>Alternative Input Text:</div>
+<input type="text" id="alternative_input">
+<button onClick="postToLM(document.getElementById('alternative_input').value)">Submit Alternative Text</button>
+<br>
 <div>Transcribed text:</div>
 <div id="transcription"></div>
 <div>Language Model output:</div>
